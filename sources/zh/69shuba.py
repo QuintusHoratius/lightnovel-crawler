@@ -3,6 +3,7 @@ import logging
 from bs4 import Tag
 from lncrawl.core.crawler import Crawler
 import urllib.parse
+import time 
 
 from lncrawl.models import Volume, Chapter
 
@@ -130,8 +131,29 @@ class sixnineshu(Crawler):
         soup = self.get_soup(chapter.url, encoding="gbk")
 
         contents = soup.select_one("div.txtnav")
-        contents.select_one("h1").decompose()
-        contents.select_one("div.txtinfo").decompose()
-        contents.select_one("div#txtright").decompose()
+        # Check if contents were found before trying to decompose elements
+        if contents:
+            title_tag = contents.select_one("h1")
+            if title_tag:
+                title_tag.decompose()
 
-        return self.cleaner.extract_contents(contents)
+            info_tag = contents.select_one("div.txtinfo")
+            if info_tag:
+                info_tag.decompose()
+
+            right_tag = contents.select_one("div#txtright")
+            if right_tag:
+                right_tag.decompose()
+
+            # Extract contents after cleaning
+            extracted_content = self.cleaner.extract_contents(contents)
+        else:
+            # Handle cases where the main content div isn't found
+            logger.warning(f"Could not find 'div.txtnav' content for chapter: {chapter.url}")
+            extracted_content = "" # Return empty string or handle as needed
+
+        # >> 여기에 딜레이 코드를 추가 <<
+        logger.debug("Waiting 2 seconds after downloading chapter...")
+        time.sleep(2)  # 2초 동안 실행을 멈춤
+
+        return extracted_content # 수정된 내용 반환 (딜레이 후)
